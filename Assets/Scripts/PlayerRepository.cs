@@ -10,6 +10,12 @@ public class PlayerRepository
 
     public async Task SaveAsync(PlayerData data)
     {
+        if (SessionMode.IsGuest)
+        {
+            Debug.Log("[CloudSave] Invitado: Save ignorado.");
+            return;
+        }
+
         string json = JsonUtility.ToJson(data);
         var dict = new Dictionary<string, object> { { KEY_PLAYER_DATA, json } };
         await CloudSaveService.Instance.Data.Player.SaveAsync(dict);
@@ -17,6 +23,18 @@ public class PlayerRepository
 
     public async Task<PlayerData> LoadOrCreateAsync(string playerId, string playerNameUGS)
     {
+        if (SessionMode.IsGuest)
+        {
+            return new PlayerData
+            {
+                playerId = "guest",
+                playerName = string.IsNullOrEmpty(playerNameUGS) ? "Invitado" : playerNameUGS,
+                nivel = 1,
+                experiencia = 0,
+                puntosHabilidad = 0,
+                stats = new PlayerStats { fuerza = 1, defensa = 1, agilidad = 1 }
+            };
+        }
         try
         {
             var result = await CloudSaveService.Instance.Data.Player.LoadAsync(

@@ -46,47 +46,77 @@ public class MenuController : MonoBehaviour
 
     private async Task InitDataAsync()
     {
+        if (SessionMode.IsGuest)
+        {
+            var data = new PlayerData
+            {
+                playerId = "guest",
+                playerName = "Invitado",
+                nivel = 1,
+                experiencia = 0,
+                puntosHabilidad = 0,
+                stats = new PlayerStats { fuerza = 1, defensa = 1, agilidad = 1 }
+            };
+
+            prog = new PlayerProgression(data);
+            ready = true;
+
+            if (inputNombreEditable) inputNombreEditable.text = data.playerName;
+            return;
+        }
+
         var playerInfo = AuthenticationService.Instance.PlayerInfo;
         string playerId = playerInfo?.Id ?? "unknown";
         string playerName = await AuthenticationService.Instance.GetPlayerNameAsync();
 
-        var data = await repo.LoadOrCreateAsync(playerId, playerName);
-        prog = new PlayerProgression(data);
+        var dataUGS = await repo.LoadOrCreateAsync(playerId, playerName);
+        prog = new PlayerProgression(dataUGS);
         ready = true;
 
-        if (inputNombreEditable) inputNombreEditable.text = playerName;
+        if (inputNombreEditable) inputNombreEditable.text = prog.Data.playerName;
     }
 
     private void HookUI()
     {
         if (btnActualizarNombre) btnActualizarNombre.onClick.AddListener(async () =>
         {
-            if (!string.IsNullOrEmpty(inputNombreEditable.text))
+            var newName = inputNombreEditable ? inputNombreEditable.text.Trim() : null;
+            if (string.IsNullOrEmpty(newName)) return;
+
+            if (SessionMode.IsGuest)
             {
-                await auth.UpdateName(inputNombreEditable.text);
-                prog.Data.playerName = inputNombreEditable.text;
-                await repo.SaveAsync(prog.Data);
+                prog.Data.playerName = newName;
                 Redraw();
+                return;
             }
+
+            await auth.UpdateName(newName);
+            prog.Data.playerName = newName;
+            await repo.SaveAsync(prog.Data);
+            Redraw();
         });
 
         if (btnFuerzaMas) btnFuerzaMas.onClick.AddListener(async () => await SpendPoint("fuerza"));
         if (btnDefensaMas) btnDefensaMas.onClick.AddListener(async () => await SpendPoint("defensa"));
         if (btnAgilidadMas) btnAgilidadMas.onClick.AddListener(async () => await SpendPoint("agilidad"));
 
-        auth.OnUpdateName += (newName) =>
+        if (!SessionMode.IsGuest && auth != null)
         {
-            if (inputNombreEditable) inputNombreEditable.text = newName;
-            prog.Data.playerName = newName;
-            Redraw();
-        };
+            auth.OnUpdateName += (newName) =>
+            {
+                if (inputNombreEditable) inputNombreEditable.text = newName;
+                if (prog != null) { prog.Data.playerName = newName; Redraw(); }
+            };
+        }
     }
+
     private async Task SpendPoint(string stat)
     {
         if (!ready) return;
         if (prog.TrySpendPointOn(stat))
         {
-            await repo.SaveAsync(prog.Data);
+            if (!SessionMode.IsGuest)
+                await repo.SaveAsync(prog.Data);
             Redraw();
         }
     }
@@ -95,14 +125,12 @@ public class MenuController : MonoBehaviour
     {
         if (!ready) return;
         bool leveled = prog.AddXP(xpPorClick);
-        if (leveled)
+
+        if (!SessionMode.IsGuest)
         {
             await repo.SaveAsync(prog.Data);
         }
-        else
-        {
-            await repo.SaveAsync(prog.Data);
-        }
+
         Redraw();
     }
 
@@ -110,14 +138,10 @@ public class MenuController : MonoBehaviour
     {
         if (prog == null) return;
 
-        if (txtJugador) txtJugador.text = string.IsNullOrEmpty(prog.Data.playerName)
-            ? "Jugador"
-            : prog.Data.playerName;
-
+        if (txtJugador) txtJugador.text = string.IsNullOrEmpty(prog.Data.playerName) ? "Jugador" : prog.Data.playerName;
         if (txtNivel) txtNivel.text = $"Nivel: {prog.Data.nivel}";
         if (txtXP) txtXP.text = $"XP: {prog.Data.experiencia} / {prog.Data.XPRequeridaSiguienteNivel}";
         if (txtPuntos) txtPuntos.text = $"Puntos: {prog.Data.puntosHabilidad}";
-
         if (txtFuerza) txtFuerza.text = $"Fuerza: {prog.Data.stats.fuerza}";
         if (txtDefensa) txtDefensa.text = $"Defensa: {prog.Data.stats.defensa}";
         if (txtAgilidad) txtAgilidad.text = $"Agilidad: {prog.Data.stats.agilidad}";

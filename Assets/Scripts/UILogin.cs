@@ -7,22 +7,31 @@ using UnityEngine.UI;
 
 public class UILogin : MonoBehaviour
 {
-    [SerializeField] private Transform loginPanel;
-    [SerializeField] private Transform userPanel;
-
+    [Header("Panels")]
+    [SerializeField] private GameObject loginPanel;
+    [SerializeField] private GameObject userPanel;
+    [Header("Botones Login")]
     [SerializeField] private Button loginButton;
+    [SerializeField] private Button updateNameBtn;
+    [SerializeField] private Button btnInvitado;
+    [Header("Textos")]
     [SerializeField] private TMP_Text playerIDTxt;
     [SerializeField] private TMP_Text playerNameTxt;
 
     [SerializeField] private TMP_InputField UpdateNameIF;
-    [SerializeField] private Button updateNameBtn;
-
 
     [SerializeField] private UnityPlayerAuth unityPlayerAuth;
     void Start()
     {
         loginPanel.gameObject.SetActive(true);
         userPanel.gameObject.SetActive(false);
+    }
+    private void Awake()
+    {
+        SessionMode.IsGuest = false;
+
+        if (btnInvitado != null)
+            btnInvitado.onClick.AddListener(EnterAsGuest);
     }
     private void OnEnable()
     {
@@ -33,7 +42,18 @@ public class UILogin : MonoBehaviour
         unityPlayerAuth.OnUpdateName += UpdateNameVisual;
     }
 
-    
+    private void EnterAsGuest()
+    {
+        // No inicializamos UGS ni autenticamos
+        SessionMode.IsGuest = true;
+
+        // Opcional: UI
+        if (loginPanel) loginPanel.SetActive(false);
+        if (userPanel) userPanel.SetActive(false);
+
+        // Ir directo al Menú
+        SceneManager.LoadScene("Menu");
+    }
 
     private async void UpdateName()
     {
