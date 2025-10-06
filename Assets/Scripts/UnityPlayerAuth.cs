@@ -44,7 +44,6 @@ public class UnityPlayerAuth : MonoBehaviour
         };
     }
 
-    //->Lo puedes llamar a traves de un boton
     public async Task InitSignIn()
     {
         await PlayerAccountService.Instance.StartSignInAsync();
@@ -103,7 +102,6 @@ public class UnityPlayerAuth : MonoBehaviour
         }
     }
 
-    //-> Cloud Save
 
 
     [Button]

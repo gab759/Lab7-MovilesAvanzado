@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using Unity.Services.Authentication;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class UILogin : MonoBehaviour
@@ -49,6 +50,7 @@ public class UILogin : MonoBehaviour
 
         playerIDTxt.text = "ID: " + playerInfo.Id;
         playerNameTxt.text = PlayerName;
+        SceneManager.LoadScene("Menu");
     }
 
     private async void LoginButton()
